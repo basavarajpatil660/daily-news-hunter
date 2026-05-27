@@ -6,9 +6,12 @@ import html
 import google.generativeai as genai
 from utils.retry import call_with_retry
 
-MODELS_IN_ORDER = [
-    "models/gemma-4-31b-it"
-]
+# Gemma 4 models kept for future manual testing:
+# MODELS_IN_ORDER = [
+#     "models/gemma-4-31b-it"
+# ]
+
+DEFAULT_MODEL = "models/gemini-2.5-flash"
 
 _active_model = None
 
@@ -20,18 +23,18 @@ def get_model():
 
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-    # Default: iterate through Gemma 4 model list
-    for model_name in MODELS_IN_ORDER:
-        try:
-            model = genai.GenerativeModel(model_name)
-            logging.info(f"Selected model: {model_name}")
-            _active_model = model
-            return model
-        except Exception as e:
-            logging.warning(f"Model {model_name} failed: {e}")
+    model_name = os.environ.get("MODEL_NAME", "").strip()
+    if not model_name:
+        model_name = DEFAULT_MODEL
 
-    logging.error("All Gemma 4 models failed.")
-    return None
+    try:
+        model = genai.GenerativeModel(model_name)
+        logging.info(f"Selected model: {model_name}")
+        _active_model = model
+        return model
+    except Exception as e:
+        logging.error(f"Failed to initialize model '{model_name}': {e}")
+        return None
 
 
 def extract_json(text):
@@ -46,7 +49,7 @@ def extract_json(text):
 def process_article(article, categories, region):
     model = get_model()
     if not model:
-        logging.error("No Gemma 4 model available. Aborting run.")
+        logging.error("No model available. Aborting run.")
         sys.exit(1)
 
     prompt = f"""You are a strict technology news editor scoring articles for an executive daily briefing.
@@ -101,11 +104,14 @@ Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
             except ValueError:
                 logging.warning(f"Environment variable GEMMA_REQUEST_TIMEOUT_SECONDS has invalid integer value '{timeout_raw}'. Falling back to default: 20")
 
-        response = selected_model.generate_content(
-            prompt,
-            request_options={"timeout": timeout}
-        )
-        raw_text = response.text
+        try:
+            response = selected_model.generate_content(
+                prompt,
+                request_options={"timeout": timeout}
+            )
+            raw_text = response.text
+        except Exception as e:
+            raise Exception(f"Model generation call failed: {e}")
         parsed = extract_json(raw_text)
         if not parsed:
             preview = raw_text[:200] if raw_text else "(empty response)"

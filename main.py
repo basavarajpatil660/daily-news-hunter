@@ -56,7 +56,7 @@ def main():
     top_count = get_int_env("TOP_ARTICLES_COUNT", 5)
     max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 5)
     
-    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 5)
+    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 2)
     request_timeout = get_int_env("GEMMA_REQUEST_TIMEOUT_SECONDS", 20)
 
     logging.info(f"User categories: {user_categories}")
@@ -170,7 +170,7 @@ def main():
     source_counts = {}
     
     for article in final_unique:
-        if article.get("final_score", 0) < 8:
+        if article.get("final_score", 0) < 7.5:
             continue
         src = article.get("source", "").strip().lower()
         if not src:
