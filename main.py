@@ -56,7 +56,7 @@ def main():
     top_count = get_int_env("TOP_ARTICLES_COUNT", 10)
     max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 5)
     
-    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 3)
+    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 1)
     request_timeout = get_int_env("GEMMA_REQUEST_TIMEOUT_SECONDS", 20)
 
     logging.info(f"User categories: {user_categories}")
