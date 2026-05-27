@@ -49,8 +49,6 @@ RELIABLE_FEEDS = [
     "https://venturebeat.com/feed/",
     "https://www.technologyreview.com/feed/",
     "http://feeds.bbci.co.uk/news/technology/rss.xml",
-    "https://feeds.reuters.com/reuters/technologyNews",
-    "https://feeds.feedburner.com/NdtvNews-Tech",
     "https://economictimes.indiatimes.com/tech/rss.cms",
     "https://www.thehindu.com/sci-tech/feeder/default.rss",
     "https://www.indiatoday.in/rss/1206578",

@@ -3,8 +3,8 @@ import logging
 import os
 
 def call_with_retry(fn, label):
-    max_attempts = int(os.environ.get("GEMMA_MAX_ATTEMPTS", 2))
-    delay_seconds = int(os.environ.get("GEMMA_RETRY_DELAY_SECONDS", 3))
+    max_attempts = int(os.environ.get("GEMMA_MAX_ATTEMPTS", 1))
+    delay_seconds = int(os.environ.get("GEMMA_RETRY_DELAY_SECONDS", 2))
 
     for attempt in range(1, max_attempts + 1):
         try:

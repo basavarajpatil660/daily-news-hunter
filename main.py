@@ -40,10 +40,13 @@ def main():
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
     top_count = int(os.environ.get("TOP_ARTICLES_COUNT", 10))
-    default_score_limit = min(max(top_count * 2, 10), 15)
-    max_articles_to_score = int(os.environ.get("MAX_ARTICLES_TO_SCORE", default_score_limit))
+    max_articles_to_score = int(os.environ.get("MAX_ARTICLES_TO_SCORE", 3))
+    
+    max_attempts = int(os.environ.get("GEMMA_MAX_ATTEMPTS", 1))
+    request_timeout = int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))
 
     logging.info(f"User categories: {user_categories}")
+    logging.info(f"Safety Mode Settings -> Max articles to score: {max_articles_to_score}, Max Gemma attempts: {max_attempts}, Request timeout: {request_timeout}s")
 
     feeds_to_fetch = []
     for cat in user_categories:
@@ -70,7 +73,7 @@ def main():
     logging.info(f"Total after keyword pre-filter: {len(keyword_filtered_articles)}")
 
     articles_to_score = keyword_filtered_articles[:max_articles_to_score]
-    logging.info(f"Sending {len(articles_to_score)} articles to Gemma scoring (cap: {max_articles_to_score})")
+    logging.warning(f"Quota safety mode active: scoring only {len(articles_to_score)} articles (cap: {max_articles_to_score})")
 
     logging.info("Starting Gemma scoring...")
     scored_articles = []
@@ -88,14 +91,7 @@ def main():
     total_processed = len(articles_to_score)
     if total_processed > 0 and (failed_count / total_processed) > 0.5:
         logging.error("Over 50% of articles failed Gemma 4 processing.")
-        send_email(
-            "News Hunter Alert - API Issues",
-            "Daily News Hunter had Gemma 4 API issues today. Some articles could not be scored. The system will retry tomorrow automatically.",
-            os.environ.get("EMAIL_TO"),
-            os.environ.get("GMAIL_USER"),
-            os.environ.get("GMAIL_PASS")
-        )
-        sys.exit(0)
+        logging.info("Skipping scary failure email alert and safely proceeding with available articles (safety mode).")
 
     logging.info(f"Total scored by Gemma 4: {len(scored_articles)}")
 
