@@ -14,26 +14,26 @@ MODELS_IN_ORDER = [
 
 _active_model = None
 
+
 def get_model():
     global _active_model
     if _active_model:
         return _active_model
-    
+
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-    
+
     for model_name in MODELS_IN_ORDER:
         try:
             model = genai.GenerativeModel(model_name)
-            # Try a dummy call or just trust it. GenerativeModel constructor doesn't verify existence until run, 
-            # so let's log and return it.
             logging.info(f"Successfully selected model: {model_name}")
             _active_model = model
             return model
         except Exception as e:
             logging.warning(f"Model {model_name} failed: {e}")
-    
-    logging.error("All Gemma models failed.")
+
+    logging.error("All Gemma 4 models failed.")
     return None
+
 
 def extract_json(text):
     try:
@@ -43,10 +43,11 @@ def extract_json(text):
     except (ValueError, json.JSONDecodeError):
         return None
 
+
 def process_article(article, categories, region):
     model = get_model()
     if not model:
-        logging.error("No Gemma model available. Aborting run.")
+        logging.error("No Gemma 4 model available. Aborting run.")
         sys.exit(1)
 
     prompt = f"""
@@ -64,8 +65,8 @@ Your tasks:
    0 means completely irrelevant.
 
 2. Write a summary in EXACTLY 2 short sentences using this structure:
-   Sentence 1: Answer "What happened?" — state the core fact clearly.
-   Sentence 2: Answer "Why should the reader care?" — explain the impact or significance.
+   Sentence 1: Answer "What happened?" - state the core fact clearly.
+   Sentence 2: Answer "Why should the reader care?" - explain the impact or significance.
    Rules:
    - Use simple, plain English. No jargon.
    - Each sentence must be under 25 words.
@@ -91,11 +92,12 @@ Start response with {{ and end with }}
   "clickbait": false
 }}
 """
+
     def _call_gemma():
-        model = get_model()
-        if not model:
-            raise Exception("No Gemma model available")
-        response = model.generate_content(
+        selected_model = get_model()
+        if not selected_model:
+            raise Exception("No Gemma 4 model available")
+        response = selected_model.generate_content(
             prompt,
             request_options={"timeout": int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))}
         )
@@ -114,10 +116,10 @@ Start response with {{ and end with }}
 
     label = f"Score article: {article['title'][:30]}"
     result = call_with_retry(_call_gemma, label)
-    
+
     if result:
-        article['gemma_score'] = result['score']
-        article['gemma_summary'] = result['summary']
-        article['clickbait'] = result['clickbait']
+        article["gemma_score"] = result["score"]
+        article["gemma_summary"] = result["summary"]
+        article["clickbait"] = result["clickbait"]
         return article
     return None
