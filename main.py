@@ -54,9 +54,9 @@ def main():
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
     top_count = get_int_env("TOP_ARTICLES_COUNT", 5)
-    max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 5)
+    max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 1)
     
-    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 2)
+    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 1)
     request_timeout = get_int_env("GEMMA_REQUEST_TIMEOUT_SECONDS", 20)
 
     logging.info(f"User categories: {user_categories}")
@@ -135,25 +135,34 @@ def main():
     articles_to_score = keyword_filtered_articles[:max_articles_to_score]
     logging.warning(f"Quota safety mode active: scoring only {len(articles_to_score)} articles (cap: {max_articles_to_score})")
 
-    logging.info("Starting Gemma scoring...")
+    logging.info("Starting AI scoring...")
     scored_articles = []
     failed_count = 0
 
     for article in articles_to_score:
-        result = process_article(article, user_categories_str, user_region)
-        if result:
-            final_score = calculate_final_score(result["gemma_score"], result["source"])
-            result["final_score"] = final_score
-            scored_articles.append(result)
-        else:
-            failed_count += 1
+        try:
+            result = process_article(article, user_categories_str, user_region)
+            if result:
+                final_score = calculate_final_score(result["gemma_score"], result["source"])
+                result["final_score"] = final_score
+                scored_articles.append(result)
+            else:
+                failed_count += 1
+        except Exception as e:
+            err_msg = str(e).lower()
+            if any(term in err_msg for term in ["429", "quota", "limit exceeded", "resource_exhausted"]):
+                logging.error("Quota exhausted, stopping AI scoring for this run.")
+                break
+            else:
+                logging.error(f"Article processing failed: {e}")
+                failed_count += 1
 
     total_processed = len(articles_to_score)
     if total_processed > 0 and (failed_count / total_processed) > 0.5:
-        logging.error("Over 50% of articles failed Gemma 4 processing.")
+        logging.error("Over 50% of articles failed AI processing.")
         logging.info("Skipping scary failure email alert and safely proceeding with available articles (safety mode).")
 
-    logging.info(f"Total scored by Gemma 4: {len(scored_articles)}")
+    logging.info(f"Total scored by AI: {len(scored_articles)}")
 
     non_clickbait = filter_clickbait(scored_articles)
     logging.info(f"Total after clickbait filter: {len(non_clickbait)}")

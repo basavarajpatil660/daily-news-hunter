@@ -4,12 +4,12 @@ import os
 
 def call_with_retry(fn, label):
     max_attempts_raw = os.environ.get("GEMMA_MAX_ATTEMPTS", "")
-    max_attempts = 2
+    max_attempts = 1
     if max_attempts_raw and max_attempts_raw.strip():
         try:
             max_attempts = int(max_attempts_raw.strip())
         except ValueError:
-            logging.warning(f"Environment variable GEMMA_MAX_ATTEMPTS has invalid integer value '{max_attempts_raw}'. Falling back to default: 2")
+            logging.warning(f"Environment variable GEMMA_MAX_ATTEMPTS has invalid integer value '{max_attempts_raw}'. Falling back to default: 1")
 
     delay_seconds_raw = os.environ.get("GEMMA_RETRY_DELAY_SECONDS", "")
     delay_seconds = 2
@@ -21,11 +21,13 @@ def call_with_retry(fn, label):
 
     for attempt in range(1, max_attempts + 1):
         try:
-            logging.info(f"Gemma [{label}]: attempt {attempt} of {max_attempts}...")
+            logging.info(f"AI [{label}]: attempt {attempt} of {max_attempts}...")
             result = fn()
             return result
         except Exception as e:
             err_str = str(e).lower()
+            if any(term in err_str for term in ["429", "quota", "limit exceeded", "resource_exhausted"]):
+                raise Exception(f"Quota exhausted: {e}")
             if any(term in err_str for term in ["not found", "404", "api key", "apikey", "permission", "invalid argument", "400", "403"]):
                 logging.error(f"Permanent error encountered for [{label}]: {e}")
                 return None
@@ -33,5 +35,5 @@ def call_with_retry(fn, label):
             if attempt < max_attempts:
                 time.sleep(delay_seconds)
 
-    logging.error(f"Gemma permanently failed for [{label}]")
+    logging.error(f"AI permanently failed for [{label}]")
     return None
