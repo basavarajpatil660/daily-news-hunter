@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+
 def format_time_ago(published_datetime):
     if not published_datetime:
         return "Unknown time"
@@ -7,13 +8,22 @@ def format_time_ago(published_datetime):
     hours = int(diff.total_seconds() / 3600)
     if hours == 0:
         mins = int(diff.total_seconds() / 60)
-        return f"{mins} mins ago"
+        return f"{mins}m ago"
     elif hours == 1:
-        return "1 hour ago"
-    return f"{hours} hours ago"
+        return "1 hr ago"
+    return f"{hours} hrs ago"
 
-def format_score_badge(score):
-    return f"{score:.1f}/11"
+
+def format_relevance_label(score):
+    """Return a small human-readable relevance label, or empty string."""
+    if score is None:
+        return ""
+    if score >= 9:
+        return "Top Pick"
+    if score >= 7.5:
+        return "High Relevance"
+    return ""
+
 
 def get_category_color(category_name):
     from config.categories import CATEGORIES

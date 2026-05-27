@@ -50,7 +50,7 @@ def process_article(article, categories, region):
         sys.exit(1)
 
     prompt = f"""
-You are a news relevance scorer.
+You are a news relevance scorer and summariser.
 The user wants news about: {categories}
 The user region is: {region}
 
@@ -62,11 +62,22 @@ Your tasks:
 1. Rate relevance from 0 to 10.
    10 means perfectly matches user interest.
    0 means completely irrelevant.
-2. Write a 2 sentence summary in simple English.
+
+2. Write a summary in EXACTLY 2 short sentences using this structure:
+   Sentence 1: Answer "What happened?" — state the core fact clearly.
+   Sentence 2: Answer "Why should the reader care?" — explain the impact or significance.
+   Rules:
+   - Use simple, plain English. No jargon.
+   - Each sentence must be under 25 words.
+   - Do NOT start with "This article", "The article", or "This piece".
+   - Write in active voice.
+
 3. Decide if this is clickbait.
    Clickbait means: shocking title with no real news,
    misleading headline, or pure motivation/opinion.
-   Reject articles about: Celebrity gossip, Bollywood entertainment (unless chosen), Sports scores (unless chosen), Astrology, horoscopes, Motivational content, Crypto pump, Pure opinion pieces.
+   Reject articles about: Celebrity gossip, Bollywood entertainment (unless chosen),
+   Sports scores (unless chosen), Astrology, horoscopes, Motivational content,
+   Crypto pump, Pure opinion pieces.
 
 IMPORTANT: Respond ONLY in valid JSON format.
 No extra text before or after.
@@ -76,7 +87,7 @@ Start response with {{ and end with }}
 
 {{
   "score": 8,
-  "summary": "First sentence here. Second sentence here.",
+  "summary": "What happened sentence. Why it matters sentence.",
   "clickbait": false
 }}
 """
