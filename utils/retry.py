@@ -1,0 +1,31 @@
+import time
+import logging
+
+def call_with_retry(fn, label):
+    # ROUND 1
+    for attempt in range(1, 11):
+        try:
+            logging.info(f"Gemma 4 [{label}]: attempt {attempt} of 10...")
+            result = fn()
+            return result
+        except Exception as e:
+            logging.debug(f"Attempt {attempt} failed: {e}")
+            time.sleep(3)
+    
+    logging.warning(f"All 10 attempts failed for [{label}]")
+    logging.info("Waiting 15 minutes before round 2...")
+    time.sleep(900)
+    logging.info(f"Starting round 2 for [{label}]...")
+    
+    # ROUND 2
+    for attempt in range(1, 11):
+        try:
+            logging.info(f"Gemma 4 [{label}]: round 2 attempt {attempt} of 10...")
+            result = fn()
+            return result
+        except Exception as e:
+            logging.debug(f"Round 2 attempt {attempt} failed: {e}")
+            time.sleep(3)
+            
+    logging.error(f"Gemma 4 permanently failed for [{label}]")
+    return None
