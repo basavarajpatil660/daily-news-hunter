@@ -6,7 +6,10 @@ import google.generativeai as genai
 from utils.retry import call_with_retry
 
 MODELS_IN_ORDER = [
-    "models/gemma-4-31b-it",   
+    "models/gemma-4-31b-it",
+    "models/gemma-4-27b-it",
+    "models/gemma-4-12b-it",
+    "models/gemma-4-4b-it"
 ]
 
 _active_model = None
@@ -81,7 +84,10 @@ Start response with {{ and end with }}
         model = get_model()
         if not model:
             raise Exception("No Gemma model available")
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            prompt,
+            request_options={"timeout": int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))}
+        )
         parsed = extract_json(response.text)
         if not parsed:
             raise Exception("Failed to parse JSON")
