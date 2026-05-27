@@ -122,10 +122,9 @@ def generate_html(articles, summary_stats):
         <!-- Articles -->
         {cards_html}
 
-        <!-- Footer -->
         <tr>
           <td style="background:#fafafa;padding:18px 24px;text-align:center;border-top:1px solid #eee;border-radius:0 0 6px 6px;">
-            <p style="margin:0;font-size:11px;color:#aaa;">Daily News Hunter &middot; Powered by Gemma 4</p>
+            <p style="margin:0;font-size:11px;color:#aaa;">Powered by <a href="https://www.instagram.com/b.nick.ai/" style="color:#8b5cf6;text-decoration:none;font-weight:600;">@b.nick.ai</a></p>
           </td>
         </tr>
 
