@@ -6,7 +6,7 @@ import google.generativeai as genai
 from utils.retry import call_with_retry
 
 MODELS_IN_ORDER = [
-    "models/gemma-4-31b-it"    
+    "models/gemma-4-31b-it"
 ]
 
 _active_model = None
@@ -19,10 +19,23 @@ def get_model():
 
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
+    # MODEL_NAME override for testing (e.g. models/gemini-2.5-flash)
+    override = os.environ.get("MODEL_NAME", "").strip()
+    if override:
+        try:
+            model = genai.GenerativeModel(override)
+            logging.info(f"Selected model (MODEL_NAME override): {override}")
+            _active_model = model
+            return model
+        except Exception as e:
+            logging.error(f"MODEL_NAME override '{override}' failed: {e}")
+            return None
+
+    # Default: iterate through Gemma 4 model list
     for model_name in MODELS_IN_ORDER:
         try:
             model = genai.GenerativeModel(model_name)
-            logging.info(f"Successfully selected model: {model_name}")
+            logging.info(f"Selected model: {model_name}")
             _active_model = model
             return model
         except Exception as e:
@@ -47,45 +60,55 @@ def process_article(article, categories, region):
         logging.error("No Gemma 4 model available. Aborting run.")
         sys.exit(1)
 
-    prompt = f"""
-You are a news relevance scorer and summariser.
-The user wants news about: {categories}
-The user region is: {region}
+    prompt = f"""You are a strict technology news editor scoring articles for an executive daily briefing.
+The reader cares about: {categories}
+Reader region: {region}
 
 Article title: {article['title']}
 Article description: {article['description']}
 Article source: {article['source']}
 
-Your tasks:
-1. Rate relevance from 0 to 10.
-   10 means perfectly matches user interest.
-   0 means completely irrelevant.
+SCORING (0-10):
+Give high scores (8-10) ONLY to stories about:
+- Major product launches, acquisitions, or shutdowns
+- Important AI research breakthroughs or model releases
+- Security vulnerabilities, data breaches, or cyber attacks
+- Significant funding rounds (Series B+), IPOs, or layoffs
+- Government regulation, bans, or policy changes affecting tech
+- Platform changes that affect many developers or users
 
-2. Write a summary in EXACTLY 2 short sentences using this structure:
-   Sentence 1: Answer "What happened?" - state the core fact clearly.
-   Sentence 2: Answer "Why should the reader care?" - explain the impact or significance.
-   Rules:
-   - Use simple, plain English. No jargon.
-   - Each sentence must be under 25 words.
-   - Do NOT start with "This article", "The article", or "This piece".
-   - Write in active voice.
+Give low scores (0-4) to:
+- Shopping deals or price drops
+- Minor app updates or feature tweaks
+- Vague product rumors without confirmation
+- Celebrity or entertainment news
+- Generic company blog posts
+- Opinion pieces without new facts
+- Motivational or self-help content
+- Astrology, horoscopes, or lifestyle
 
-3. Decide if this is clickbait.
-   Clickbait means: shocking title with no real news,
-   misleading headline, or pure motivation/opinion.
-   Reject articles about: Celebrity gossip, Bollywood entertainment (unless chosen),
-   Sports scores (unless chosen), Astrology, horoscopes, Motivational content,
-   Crypto pump, Pure opinion pieces.
+SUMMARY - exactly 2 sentences:
+Sentence 1: What happened - name the key actor and the specific action. Under 24 words.
+Sentence 2: Why it matters to a tech or AI reader - state the concrete impact. Under 24 words.
+Rules:
+- Do NOT repeat the headline word-for-word.
+- Do NOT start with "This article", "The article", or "This piece".
+- No vague phrases like "This is important because" or "This could impact".
+- Use active voice. Be specific.
 
-IMPORTANT: Respond ONLY in valid JSON format.
-No extra text before or after.
-No markdown formatting.
-No code blocks.
-Start response with {{ and end with }}
+IMPORTANCE REASON:
+Write one short phrase (3-7 words) classifying why this story matters.
+Examples: "Major AI product shift", "Security risk for developers", "Key platform policy change", "Low impact consumer update".
+
+CLICKBAIT:
+Set true if the headline is misleading, sensationalized, has no real news, or is pure opinion.
+
+Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
 
 {{
   "score": 8,
   "summary": "What happened sentence. Why it matters sentence.",
+  "importance_reason": "Short phrase here",
   "clickbait": false
 }}
 """
@@ -98,9 +121,11 @@ Start response with {{ and end with }}
             prompt,
             request_options={"timeout": int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))}
         )
-        parsed = extract_json(response.text)
+        raw_text = response.text
+        parsed = extract_json(raw_text)
         if not parsed:
-            raise Exception("Failed to parse JSON")
+            preview = raw_text[:200] if raw_text else "(empty response)"
+            raise Exception(f"Failed to parse JSON from model response: {preview}")
         if "score" not in parsed or "summary" not in parsed or "clickbait" not in parsed:
             raise Exception("Missing required fields in JSON")
         if not isinstance(parsed["score"], (int, float)) or not (0 <= parsed["score"] <= 10):
@@ -109,6 +134,9 @@ Start response with {{ and end with }}
             raise Exception("Invalid summary")
         if not isinstance(parsed["clickbait"], bool):
             raise Exception("Invalid clickbait boolean")
+        # importance_reason is optional for validation - use default if missing
+        if "importance_reason" not in parsed or not isinstance(parsed.get("importance_reason"), str):
+            parsed["importance_reason"] = ""
         return parsed
 
     label = f"Score article: {article['title'][:30]}"
@@ -117,6 +145,7 @@ Start response with {{ and end with }}
     if result:
         article["gemma_score"] = result["score"]
         article["gemma_summary"] = result["summary"]
+        article["importance_reason"] = result.get("importance_reason", "")
         article["clickbait"] = result["clickbait"]
         return article
     return None

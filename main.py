@@ -40,7 +40,7 @@ def main():
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
     top_count = int(os.environ.get("TOP_ARTICLES_COUNT", 10))
-    max_articles_to_score = int(os.environ.get("MAX_ARTICLES_TO_SCORE", 3))
+    max_articles_to_score = int(os.environ.get("MAX_ARTICLES_TO_SCORE", 1))
     
     max_attempts = int(os.environ.get("GEMMA_MAX_ATTEMPTS", 1))
     request_timeout = int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))
@@ -108,8 +108,9 @@ def main():
     logging.info(f"Final top articles selected: {len(top_articles)}")
 
     for article in top_articles:
+        reason = article.get("importance_reason", "")
         logging.info(
-            f"Title: {article['title']} | Source: {article['source']} | Score: {article['final_score']}"
+            f"Title: {article['title']} | Source: {article['source']} | Score: {article['final_score']} | Why: {reason}"
         )
 
     summary_stats = {

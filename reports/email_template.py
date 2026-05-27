@@ -29,21 +29,20 @@ def generate_html(articles, summary_stats):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily News Report - {_escape(date_str)}</title>
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f5f0;margin:0;padding:24px 16px;color:#1a1a1a;">
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f4f4f2;margin:0;padding:24px 16px;color:#1a1a1a;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
     <tr><td align="center">
-      <table width="100%" style="max-width:620px;" cellpadding="0" cellspacing="0" border="0" role="presentation">
+      <table width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0" border="0" role="presentation">
         <tr>
-          <td style="background:#1a1a2e;padding:32px 28px;text-align:center;border-radius:8px 8px 0 0;">
-            <p style="margin:0;font-size:11px;letter-spacing:2px;color:#8892b0;text-transform:uppercase;">Daily News Hunter</p>
-            <h1 style="margin:8px 0 4px 0;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:0;">Daily News Report</h1>
-            <p style="margin:0;font-size:13px;color:#8892b0;">{_escape(date_str)}</p>
+          <td style="background:#1a1a2e;padding:28px 24px;text-align:center;border-radius:6px 6px 0 0;">
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0;">Daily News Report</h1>
+            <p style="margin:6px 0 0 0;font-size:12px;color:#8892b0;">{_escape(date_str)}</p>
           </td>
         </tr>
         <tr>
-          <td style="background:#ffffff;padding:40px 28px;text-align:center;border-radius:0 0 8px 8px;">
-            <p style="font-size:16px;color:#555;line-height:1.6;">No qualifying articles were found today for your chosen categories.</p>
-            <p style="font-size:14px;color:#888;">The system will try again at the next scheduled run automatically.</p>
+          <td style="background:#ffffff;padding:36px 24px;text-align:center;border-radius:0 0 6px 6px;">
+            <p style="font-size:15px;color:#555;line-height:1.6;margin:0;">No qualifying articles were found today.</p>
+            <p style="font-size:13px;color:#999;margin:10px 0 0 0;">The system will try again at the next scheduled run.</p>
           </td>
         </tr>
       </table>
@@ -52,6 +51,7 @@ def generate_html(articles, summary_stats):
 </body>
 </html>"""
 
+    # Build article cards
     cards_html = ""
     for idx, article in enumerate(articles):
         cat_color = get_category_color(article.get("category", ""))
@@ -60,38 +60,38 @@ def generate_html(articles, summary_stats):
         source = _escape(article.get("source", "Unknown source"))
         time_ago = _escape(format_time_ago(article.get("published_date")))
         summary = _escape(article.get("gemma_summary", ""))
-        link = _escape(article.get("link", "#"))
+        importance = _escape(article.get("importance_reason", ""))
+        link = article.get("link", "#")
         relevance_label = format_relevance_label(article.get("final_score", 0))
-        top_border = "border-top: none;" if idx == 0 else "border-top: 1px solid #eeeeee;"
+        separator = "" if idx == 0 else '<tr><td style="padding:0 24px;"><hr style="border:none;border-top:1px solid #eee;margin:0;"></td></tr>'
 
-        relevance_html = ""
+        # Badge HTML - only for Top Pick or Important
+        badge_html = ""
         if relevance_label:
-            relevance_html = f"""
-            <span style="display:inline-block;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 7px;border-radius:10px;letter-spacing:0.5px;text-transform:uppercase;margin-left:6px;">{_escape(relevance_label)}</span>"""
+            badge_html = f' <span style="display:inline-block;font-size:9px;font-weight:700;color:#15803d;background:#dcfce7;padding:1px 6px;border-radius:8px;letter-spacing:0.3px;text-transform:uppercase;vertical-align:middle;">{_escape(relevance_label)}</span>'
 
-        cards_html += f"""
+        # Why it matters line - only if importance_reason exists
+        importance_html = ""
+        if importance:
+            importance_html = f'<p style="margin:0 0 12px 0;font-size:12px;color:#8b5cf6;font-style:italic;line-height:1.4;">Why it matters: {importance}</p>'
+
+        cards_html += f"""{separator}
         <tr>
-          <td style="padding:24px 28px;{top_border}">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-              <tr>
-                <td>
-                  <span style="display:inline-block;font-size:10px;font-weight:700;color:#ffffff;background:{cat_color};padding:3px 9px;border-radius:10px;letter-spacing:0.5px;text-transform:uppercase;">{category}</span>{relevance_html}
-                </td>
-                <td align="right" style="font-size:11px;color:#9ca3af;white-space:nowrap;">{time_ago}</td>
-              </tr>
-            </table>
-            <h2 style="margin:10px 0 4px 0;font-size:17px;font-weight:700;line-height:1.4;color:#111827;letter-spacing:0;">
-              <a href="{link}" style="color:#111827;text-decoration:none;">{title}</a>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 6px 0;font-size:10px;color:#6b7280;letter-spacing:0.3px;">
+              <span style="display:inline-block;font-size:9px;font-weight:700;color:#fff;background:{cat_color};padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:middle;">{category}</span>{badge_html}
+              <span style="color:#bbb;margin:0 4px;">|</span>{source}<span style="color:#bbb;margin:0 4px;">|</span>{time_ago}
+            </p>
+            <h2 style="margin:0 0 8px 0;font-size:16px;font-weight:700;line-height:1.35;color:#111;">
+              <a href="{_escape(link)}" style="color:#111;text-decoration:none;">{title}</a>
             </h2>
-            <p style="margin:0 0 10px 0;font-size:12px;color:#6b7280;">{source}</p>
-            <p style="margin:0 0 16px 0;font-size:14px;color:#374151;line-height:1.65;">{summary}</p>
-            <a href="{link}"
-               style="display:inline-block;background:#1a1a2e;color:#ffffff;text-decoration:none;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:600;letter-spacing:0.2px;">
-              Read Full Article &rarr;
-            </a>
+            <p style="margin:0 0 8px 0;font-size:14px;color:#374151;line-height:1.55;">{summary}</p>
+            {importance_html}
+            <a href="{_escape(link)}" style="font-size:13px;color:#2563eb;text-decoration:none;font-weight:600;">Read full article &rarr;</a>
           </td>
         </tr>"""
 
+    # Full document
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,53 +99,36 @@ def generate_html(articles, summary_stats):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daily News Report - {_escape(date_str)}</title>
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f5f0;margin:0;padding:24px 16px;color:#1a1a1a;-webkit-text-size-adjust:100%;">
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f4f4f2;margin:0;padding:24px 16px;color:#1a1a1a;-webkit-text-size-adjust:100%;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
     <tr><td align="center">
-      <table width="100%" style="max-width:640px;" cellpadding="0" cellspacing="0" border="0" role="presentation">
+      <table width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0" border="0" role="presentation">
+
+        <!-- Header -->
         <tr>
-          <td style="background:#1a1a2e;padding:32px 28px 28px 28px;text-align:center;border-radius:8px 8px 0 0;">
-            <p style="margin:0 0 6px 0;font-size:10px;letter-spacing:3px;color:#8892b0;text-transform:uppercase;font-weight:600;">Daily News Hunter</p>
-            <h1 style="margin:0 0 8px 0;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:0;">Daily News Report</h1>
-            <p style="margin:0;font-size:13px;color:#8892b0;">{_escape(date_str)}</p>
+          <td style="background:#1a1a2e;padding:28px 24px 22px 24px;text-align:center;border-radius:6px 6px 0 0;">
+            <h1 style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0;">Daily News Report</h1>
+            <p style="margin:0;font-size:12px;color:#8892b0;">{_escape(date_str)} - {_escape(categories_str)}</p>
           </td>
         </tr>
+
+        <!-- Subtle stats line -->
         <tr>
-          <td style="background:#16213e;padding:12px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-              <tr>
-                <td style="text-align:center;padding:0 8px;border-right:1px solid #2d3561;">
-                  <p style="margin:0;font-size:18px;font-weight:700;color:#64ffda;">{total_fetched}</p>
-                  <p style="margin:2px 0 0 0;font-size:10px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px;">Fetched</p>
-                </td>
-                <td style="text-align:center;padding:0 8px;border-right:1px solid #2d3561;">
-                  <p style="margin:0;font-size:18px;font-weight:700;color:#64ffda;">{total_scored}</p>
-                  <p style="margin:2px 0 0 0;font-size:10px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px;">Scored</p>
-                </td>
-                <td style="text-align:center;padding:0 8px;border-right:1px solid #2d3561;">
-                  <p style="margin:0;font-size:18px;font-weight:700;color:#64ffda;">{total_selected}</p>
-                  <p style="margin:2px 0 0 0;font-size:10px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px;">Selected</p>
-                </td>
-                <td style="text-align:center;padding:0 8px;">
-                  <p style="margin:0;font-size:11px;font-weight:600;color:#64ffda;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">{_escape(categories_str)}</p>
-                  <p style="margin:2px 0 0 0;font-size:10px;color:#8892b0;text-transform:uppercase;letter-spacing:0.5px;">Topics</p>
-                </td>
-              </tr>
-            </table>
+          <td style="background:#ffffff;padding:14px 24px 10px 24px;border-bottom:1px solid #f0f0f0;">
+            <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">{total_fetched} scanned &middot; {total_scored} scored &middot; {total_selected} selected</p>
           </td>
         </tr>
-        <tr>
-          <td style="background:#ffffff;padding:20px 28px 8px 28px;border-top:3px solid #64ffda;">
-            <p style="margin:0;font-size:13px;color:#6b7280;">Here are today's top stories, curated and summarised by Gemma&nbsp;4.</p>
-          </td>
-        </tr>
+
+        <!-- Articles -->
         {cards_html}
+
+        <!-- Footer -->
         <tr>
-          <td style="background:#f9fafb;padding:20px 28px;text-align:center;border-top:1px solid #e5e7eb;border-radius:0 0 8px 8px;">
-            <p style="margin:0;font-size:11px;color:#9ca3af;">Automated by <strong>Daily News Hunter</strong> &bull; Powered by Gemma&nbsp;4</p>
-            <p style="margin:4px 0 0 0;font-size:11px;color:#d1d5db;">You are receiving this because you set up Daily News Hunter.</p>
+          <td style="background:#fafafa;padding:18px 24px;text-align:center;border-top:1px solid #eee;border-radius:0 0 6px 6px;">
+            <p style="margin:0;font-size:11px;color:#aaa;">Daily News Hunter &middot; Powered by Gemma 4</p>
           </td>
         </tr>
+
       </table>
     </td></tr>
   </table>
