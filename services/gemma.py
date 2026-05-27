@@ -1,3 +1,4 @@
+import sys
 import os
 import json
 import logging
@@ -5,6 +6,9 @@ import google.generativeai as genai
 from utils.retry import call_with_retry
 
 MODELS_IN_ORDER = [
+    "models/gemma-2-27b-it",
+    "models/gemma-2-9b-it",
+    "models/gemma-2-2b-it",
     "models/gemma-4-31b-it",
     "models/gemma-4-27b-it",
     "models/gemma-4-12b-it",
@@ -23,13 +27,15 @@ def get_model():
     for model_name in MODELS_IN_ORDER:
         try:
             model = genai.GenerativeModel(model_name)
+            # Try a dummy call or just trust it. GenerativeModel constructor doesn't verify existence until run, 
+            # so let's log and return it.
             logging.info(f"Successfully selected model: {model_name}")
             _active_model = model
             return model
         except Exception as e:
             logging.warning(f"Model {model_name} failed: {e}")
     
-    logging.error("All Gemma 4 models failed.")
+    logging.error("All Gemma models failed.")
     return None
 
 def extract_json(text):
@@ -41,6 +47,11 @@ def extract_json(text):
         return None
 
 def process_article(article, categories, region):
+    model = get_model()
+    if not model:
+        logging.error("No Gemma model available. Aborting run.")
+        sys.exit(1)
+
     prompt = f"""
 You are a news relevance scorer.
 The user wants news about: {categories}
