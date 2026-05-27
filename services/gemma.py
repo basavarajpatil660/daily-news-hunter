@@ -20,18 +20,6 @@ def get_model():
 
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-    # MODEL_NAME override for testing (e.g. models/gemini-2.5-flash)
-    override = os.environ.get("MODEL_NAME", "").strip()
-    if override:
-        try:
-            model = genai.GenerativeModel(override)
-            logging.info(f"Selected model (MODEL_NAME override): {override}")
-            _active_model = model
-            return model
-        except Exception as e:
-            logging.error(f"MODEL_NAME override '{override}' failed: {e}")
-            return None
-
     # Default: iterate through Gemma 4 model list
     for model_name in MODELS_IN_ORDER:
         try:

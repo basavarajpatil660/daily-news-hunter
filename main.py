@@ -34,7 +34,7 @@ def check_env():
     required = [
         "GEMINI_API_KEY", "GMAIL_USER", "GMAIL_PASS",
         "EMAIL_TO", "NEWS_CATEGORIES", "NEWS_REGION",
-        "NEWS_LANGUAGE", "TOP_ARTICLES_COUNT"
+        "NEWS_LANGUAGE"
     ]
     missing = [req for req in required if os.environ.get(req) is None]
     if missing:
@@ -53,13 +53,14 @@ def main():
     user_categories = [c.strip() for c in user_categories_str.split(",") if c.strip()]
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
-    top_count = get_int_env("TOP_ARTICLES_COUNT", 10)
+    top_count = get_int_env("TOP_ARTICLES_COUNT", 5)
     max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 5)
     
-    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 1)
+    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 5)
     request_timeout = get_int_env("GEMMA_REQUEST_TIMEOUT_SECONDS", 20)
 
     logging.info(f"User categories: {user_categories}")
+    logging.info(f"Quota setting: scoring up to {max_articles_to_score} articles")
     logging.info(f"Safety Mode Settings -> Max articles to score: {max_articles_to_score}, Max Gemma attempts: {max_attempts}, Request timeout: {request_timeout}s")
 
     feeds_to_fetch = []

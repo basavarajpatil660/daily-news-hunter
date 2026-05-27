@@ -4,12 +4,12 @@ import os
 
 def call_with_retry(fn, label):
     max_attempts_raw = os.environ.get("GEMMA_MAX_ATTEMPTS", "")
-    max_attempts = 1
+    max_attempts = 5
     if max_attempts_raw and max_attempts_raw.strip():
         try:
             max_attempts = int(max_attempts_raw.strip())
         except ValueError:
-            logging.warning(f"Environment variable GEMMA_MAX_ATTEMPTS has invalid integer value '{max_attempts_raw}'. Falling back to default: 1")
+            logging.warning(f"Environment variable GEMMA_MAX_ATTEMPTS has invalid integer value '{max_attempts_raw}'. Falling back to default: 5")
 
     delay_seconds_raw = os.environ.get("GEMMA_RETRY_DELAY_SECONDS", "")
     delay_seconds = 2

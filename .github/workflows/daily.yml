@@ -32,6 +32,5 @@ jobs:
           NEWS_REGION: ${{ secrets.NEWS_REGION }}
           NEWS_LANGUAGE: ${{ secrets.NEWS_LANGUAGE }}
           TOP_ARTICLES_COUNT: ${{ secrets.TOP_ARTICLES_COUNT }}
-          MODEL_NAME: ${{ secrets.MODEL_NAME }}
           MAX_ARTICLES_TO_SCORE: ${{ secrets.MAX_ARTICLES_TO_SCORE }}
         run: python main.py
