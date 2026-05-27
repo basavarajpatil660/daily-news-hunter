@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import logging
+import html
 import google.generativeai as genai
 from utils.retry import call_with_retry
 
@@ -68,28 +69,15 @@ Article title: {article['title']}
 Article description: {article['description']}
 Article source: {article['source']}
 
-SCORING (0-10):
-Give high scores (8-10) ONLY to stories about:
-- Major product launches, acquisitions, or shutdowns
-- Important AI research breakthroughs or model releases
-- Security vulnerabilities, data breaches, or cyber attacks
-- Significant funding rounds (Series B+), IPOs, or layoffs
-- Government regulation, bans, or policy changes affecting tech
-- Platform changes that affect many developers or users
+SCORING CRITERIA (0-10):
+- Score 9-10 (Major, High-Impact Industry News): Reserved ONLY for critical news with major industry-wide implications. Examples: major AI research breakthroughs, foundation model releases, critical zero-day security vulnerabilities or major cyber attacks, significant government tech regulations or policy changes, large funding/acquisitions/IPOs (Series B+), or massive platform changes affecting millions of users/developers.
+- Score 7-8 (Important/Useful News): Helpful, notable tech news but not groundbreaking. Examples: solid company product launches, smaller funding rounds, notable but non-critical security incidents, or developer-relevant updates.
+- Score 5-6 (Normal/Routine Updates): Standard industry events, ordinary product updates, or typical tech press releases.
+- Score below 5 (Low-Impact/Noise - Penalize heavily): App UI changes (such as Fitbit app UI redesigns), shopping/deals, rumors, tiny product updates, generic feature updates, opinion pieces, or soft lifestyle/consumer tech stories.
 
-Give low scores (0-4) to:
-- Shopping deals or price drops
-- Minor app updates or feature tweaks
-- Vague product rumors without confirmation
-- Celebrity or entertainment news
-- Generic company blog posts
-- Opinion pieces without new facts
-- Motivational or self-help content
-- Astrology, horoscopes, or lifestyle
-
-SUMMARY - exactly 2 sentences:
-Sentence 1: What happened - name the key actor and the specific action. Under 24 words.
-Sentence 2: Why it matters to a tech or AI reader - state the concrete impact. Under 24 words.
+SUMMARY - exactly 2 sentences with strong insight:
+Sentence 1: What happened - name the key actor and the specific concrete action. Under 24 words.
+Sentence 2: Why it matters - state the concrete, high-level business, developer, or industry impact. Give a strong, insightful explanation instead of a vague or obvious statement. Under 24 words.
 Rules:
 - Do NOT repeat the headline word-for-word.
 - Do NOT start with "This article", "The article", or "This piece".
@@ -140,6 +128,9 @@ Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
             raise Exception("Invalid score")
         if not isinstance(parsed["summary"], str) or len(parsed["summary"].strip()) == 0:
             raise Exception("Invalid summary")
+        parsed["summary"] = html.unescape(parsed["summary"])
+        if "importance_reason" in parsed and isinstance(parsed["importance_reason"], str):
+            parsed["importance_reason"] = html.unescape(parsed["importance_reason"])
         if not isinstance(parsed["clickbait"], bool):
             raise Exception("Invalid clickbait boolean")
         # importance_reason is optional for validation - use default if missing

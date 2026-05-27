@@ -2,6 +2,7 @@ import feedparser
 import threading
 import logging
 import requests
+import html
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 
@@ -27,9 +28,9 @@ def fetch_feed(url, results, category):
         response.raise_for_status()
         feed = feedparser.parse(response.content)
         for entry in feed.entries:
-            title = entry.get("title", "")
+            title = html.unescape(entry.get("title", ""))
             link = entry.get("link", "")
-            description = entry.get("summary", entry.get("description", ""))
+            description = html.unescape(entry.get("summary", entry.get("description", "")))
             if not title or not description:
                 continue
             
@@ -38,9 +39,9 @@ def fetch_feed(url, results, category):
             
             source_name = ""
             if "source" in entry and isinstance(entry.source, dict):
-                source_name = entry.source.get("title", "")
+                source_name = html.unescape(entry.source.get("title", ""))
             if not source_name and "title" in feed.feed:
-                source_name = feed.feed.title
+                source_name = html.unescape(feed.feed.title)
                 
             thumbnail = ""
             if "media_content" in entry:

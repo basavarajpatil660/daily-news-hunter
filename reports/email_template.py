@@ -68,21 +68,21 @@ def generate_html(articles, summary_stats):
         # Badge HTML - only for Top Pick or Important
         badge_html = ""
         if relevance_label:
-            badge_html = f' <span style="display:inline-block;font-size:9px;font-weight:700;color:#15803d;background:#dcfce7;padding:1px 6px;border-radius:8px;letter-spacing:0.3px;text-transform:uppercase;vertical-align:middle;">{_escape(relevance_label)}</span>'
+            badge_html = f' <span style="display:inline-block;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:8px;letter-spacing:0.3px;text-transform:uppercase;vertical-align:middle;margin-left:4px;">{_escape(relevance_label)}</span>'
 
         # Why it matters line - only if importance_reason exists
         importance_html = ""
         if importance:
-            importance_html = f'<p style="margin:0 0 12px 0;font-size:12px;color:#8b5cf6;font-style:italic;line-height:1.4;">Why it matters: {importance}</p>'
+            importance_html = f'<p style="margin:0 0 12px 0;font-size:12px;color:#4b5563;line-height:1.4;border-left:2px solid #8b5cf6;padding-left:8px;"><span style="font-weight:600;color:#6d28d9;text-transform:uppercase;font-size:10px;letter-spacing:0.3px;margin-right:4px;">Insight:</span> {importance}</p>'
 
         cards_html += f"""{separator}
         <tr>
           <td style="padding:20px 24px;">
-            <p style="margin:0 0 6px 0;font-size:10px;color:#6b7280;letter-spacing:0.3px;">
-              <span style="display:inline-block;font-size:9px;font-weight:700;color:#fff;background:{cat_color};padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:middle;">{category}</span>{badge_html}
-              <span style="color:#bbb;margin:0 4px;">|</span>{source}<span style="color:#bbb;margin:0 4px;">|</span>{time_ago}
+            <p style="margin:0 0 8px 0;font-size:11px;color:#6b7280;letter-spacing:0.3px;">
+              <span style="display:inline-block;font-size:10px;font-weight:700;color:#fff;background:{cat_color};padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:middle;">{category}</span>{badge_html}
+              <span style="color:#ccc;margin:0 6px;">|</span>{source}<span style="color:#ccc;margin:0 6px;">|</span>{time_ago}
             </p>
-            <h2 style="margin:0 0 8px 0;font-size:16px;font-weight:700;line-height:1.35;color:#111;">
+            <h2 style="margin:0 0 8px 0;font-size:18px;font-weight:700;line-height:1.35;color:#111;">
               <a href="{_escape(link)}" style="color:#111;text-decoration:none;">{title}</a>
             </h2>
             <p style="margin:0 0 8px 0;font-size:14px;color:#374151;line-height:1.55;">{summary}</p>
