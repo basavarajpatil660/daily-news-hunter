@@ -6,13 +6,7 @@ import google.generativeai as genai
 from utils.retry import call_with_retry
 
 MODELS_IN_ORDER = [
-    "models/gemma-2-27b-it",
-    "models/gemma-2-9b-it",
-    "models/gemma-2-2b-it",
-    "models/gemma-4-31b-it",
-    "models/gemma-4-27b-it",
-    "models/gemma-4-12b-it",
-    "models/gemma-4-4b-it"
+    "models/gemma-4-31b-it",   
 ]
 
 _active_model = None
