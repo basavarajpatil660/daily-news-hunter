@@ -14,7 +14,38 @@ from utils.retry import call_with_retry
 
 DEFAULT_MODEL = "models/gemini-2.5-flash"
 
+MODELS_TO_TRY = [
+    "gemma-3-27b-it",
+    "gemma-3-12b-it", 
+    "gemma-3-4b-it",
+    "gemma-2-27b-it",
+    "gemma-2-9b-it",
+]
+
 _active_model = None
+
+
+def get_working_model(client):
+    models = list(MODELS_TO_TRY)
+    env_model = os.environ.get("MODEL_NAME", "").strip()
+    if env_model:
+        models.insert(0, env_model)
+    else:
+        models.append(DEFAULT_MODEL)
+        
+    for name in models:
+        model_name = name if name.startswith("models/") else f"models/{name}"
+        try:
+            model = client.GenerativeModel(model_name)
+            # Test with a minimal call
+            test = model.generate_content("Reply with: ok")
+            if test:
+                logging.info(f"Working model found: {model_name}")
+                return model, model_name
+        except Exception as e:
+            logging.warning(f"Model {model_name} not available: {e}")
+            continue
+    return None, None
 
 
 def get_model():
@@ -24,18 +55,13 @@ def get_model():
 
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-    model_name = os.environ.get("MODEL_NAME", "").strip()
-    if not model_name:
-        model_name = DEFAULT_MODEL
-
-    try:
-        model = genai.GenerativeModel(model_name)
-        logging.info(f"Selected model: {model_name}")
+    model, found_name = get_working_model(genai)
+    if model:
         _active_model = model
         return model
-    except Exception as e:
-        logging.error(f"Failed to initialize model '{model_name}': {e}")
-        return None
+    
+    logging.error("Failed to find any working model.")
+    return None
 
 
 def extract_json(text):
