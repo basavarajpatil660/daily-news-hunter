@@ -19,7 +19,7 @@ def send_email(subject, html_content, to_email, gmail_user, gmail_pass):
     
     try:
         logging.info("Connecting to Gmail SMTP...")
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=20)
         server.starttls()
         server.login(gmail_user, gmail_pass)
         server.send_message(msg)

@@ -38,6 +38,8 @@ def main():
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
     top_count = int(os.environ.get("TOP_ARTICLES_COUNT", 10))
+    default_score_limit = min(max(top_count * 2, 10), 15)
+    max_articles_to_score = int(os.environ.get("MAX_ARTICLES_TO_SCORE", default_score_limit))
     
     logging.info(f"User categories: {user_categories}")
     
@@ -64,12 +66,15 @@ def main():
     
     keyword_filtered_articles = filter_by_keywords(recent_articles, CATEGORIES, user_categories)
     logging.info(f"Total after keyword pre-filter: {len(keyword_filtered_articles)}")
+
+    articles_to_score = keyword_filtered_articles[:max_articles_to_score]
+    logging.info(f"Sending {len(articles_to_score)} articles to Gemma scoring (cap: {max_articles_to_score})")
     
-    logging.info("Starting Gemma 4 scoring...")
+    logging.info("Starting Gemma scoring...")
     scored_articles = []
     failed_count = 0
     
-    for article in keyword_filtered_articles:
+    for article in articles_to_score:
         result = process_article(article, user_categories_str, user_region)
         if result:
             final_score = calculate_final_score(result['gemma_score'], result['source'])
@@ -78,7 +83,7 @@ def main():
         else:
             failed_count += 1
             
-    total_processed = len(keyword_filtered_articles)
+    total_processed = len(articles_to_score)
     if total_processed > 0 and (failed_count / total_processed) > 0.5:
         logging.error("Over 50% of articles failed Gemma 4 processing.")
         send_email(

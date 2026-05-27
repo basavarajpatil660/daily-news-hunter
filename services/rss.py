@@ -1,8 +1,11 @@
 import feedparser
 import threading
 import logging
+import requests
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
+
+FEED_TIMEOUT_SECONDS = 12
 
 def parse_date(date_string):
     try:
@@ -16,7 +19,13 @@ def parse_date(date_string):
 def fetch_feed(url, results, category):
     try:
         logging.info(f"Fetching RSS feed: {url}")
-        feed = feedparser.parse(url)
+        response = requests.get(
+            url,
+            timeout=FEED_TIMEOUT_SECONDS,
+            headers={"User-Agent": "DailyNewsHunter/1.0"}
+        )
+        response.raise_for_status()
+        feed = feedparser.parse(response.content)
         for entry in feed.entries:
             title = entry.get("title", "")
             link = entry.get("link", "")
@@ -55,12 +64,20 @@ def fetch_feed(url, results, category):
 def fetch_all_feeds(feeds_with_categories):
     results = []
     threads = []
+    lock = threading.Lock()
+
+    def fetch_and_store(url, category):
+        local_results = []
+        fetch_feed(url, local_results, category)
+        with lock:
+            results.extend(local_results)
+
     for url, category in feeds_with_categories:
-        t = threading.Thread(target=fetch_feed, args=(url, results, category))
+        t = threading.Thread(target=fetch_and_store, args=(url, category), daemon=True)
         threads.append(t)
         t.start()
         
     for t in threads:
-        t.join(timeout=10)
+        t.join(timeout=FEED_TIMEOUT_SECONDS + 3)
         
     return results
