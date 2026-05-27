@@ -117,9 +117,17 @@ Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
         selected_model = get_model()
         if not selected_model:
             raise Exception("No Gemma 4 model available")
+        timeout_raw = os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", "")
+        timeout = 20
+        if timeout_raw and timeout_raw.strip():
+            try:
+                timeout = int(timeout_raw.strip())
+            except ValueError:
+                logging.warning(f"Environment variable GEMMA_REQUEST_TIMEOUT_SECONDS has invalid integer value '{timeout_raw}'. Falling back to default: 20")
+
         response = selected_model.generate_content(
             prompt,
-            request_options={"timeout": int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))}
+            request_options={"timeout": timeout}
         )
         raw_text = response.text
         parsed = extract_json(raw_text)

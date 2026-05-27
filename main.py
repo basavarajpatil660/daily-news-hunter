@@ -16,13 +16,27 @@ from reports.email_template import generate_html
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
+def get_int_env(name, default):
+    val = os.environ.get(name)
+    if val is None:
+        return default
+    val_stripped = val.strip()
+    if not val_stripped:
+        return default
+    try:
+        return int(val_stripped)
+    except ValueError:
+        logging.warning(f"Environment variable {name} has invalid integer value '{val}'. Falling back to default: {default}")
+        return default
+
+
 def check_env():
     required = [
         "GEMINI_API_KEY", "GMAIL_USER", "GMAIL_PASS",
         "EMAIL_TO", "NEWS_CATEGORIES", "NEWS_REGION",
         "NEWS_LANGUAGE", "TOP_ARTICLES_COUNT"
     ]
-    missing = [req for req in required if not os.environ.get(req)]
+    missing = [req for req in required if os.environ.get(req) is None]
     if missing:
         logging.error(f"Missing required environment variables: {', '.join(missing)}")
         sys.exit(1)
@@ -39,11 +53,11 @@ def main():
     user_categories = [c.strip() for c in user_categories_str.split(",") if c.strip()]
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
-    top_count = int(os.environ.get("TOP_ARTICLES_COUNT", 10))
-    max_articles_to_score = int(os.environ.get("MAX_ARTICLES_TO_SCORE", 1))
+    top_count = get_int_env("TOP_ARTICLES_COUNT", 10)
+    max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 1)
     
-    max_attempts = int(os.environ.get("GEMMA_MAX_ATTEMPTS", 1))
-    request_timeout = int(os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", 20))
+    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 1)
+    request_timeout = get_int_env("GEMMA_REQUEST_TIMEOUT_SECONDS", 20)
 
     logging.info(f"User categories: {user_categories}")
     logging.info(f"Safety Mode Settings -> Max articles to score: {max_articles_to_score}, Max Gemma attempts: {max_attempts}, Request timeout: {request_timeout}s")
