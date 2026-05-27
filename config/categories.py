@@ -57,6 +57,8 @@ RELIABLE_FEEDS = [
     "https://www.hindustantimes.com/feeds/rss/technology/rssfeed.xml"
 ]
 
+import urllib.parse
+
 def get_google_news_rss(keyword, region="Global worldwide", language="English only"):
     hl = "en-IN"
     gl = "IN"
@@ -71,7 +73,9 @@ def get_google_news_rss(keyword, region="Global worldwide", language="English on
         gl = "US"
         ceid = "US:en"
     
-    return f"https://news.google.com/rss/search?q={keyword}&hl={hl}&gl={gl}&ceid={ceid}"
+    keyword_encoded = urllib.parse.quote(keyword)
+    return f"https://news.google.com/rss/search?q={keyword_encoded}&hl={hl}&gl={gl}&ceid={ceid}"
 
 def get_google_news_rss_hindi(keyword):
-    return f"https://news.google.com/rss/search?q={keyword}&hl=hi-IN&gl=IN&ceid=IN:hi"
+    keyword_encoded = urllib.parse.quote(keyword)
+    return f"https://news.google.com/rss/search?q={keyword_encoded}&hl=hi-IN&gl=IN&ceid=IN:hi"
