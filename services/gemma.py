@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import html
+import time
 import google.generativeai as genai
 from utils.retry import call_with_retry
 
@@ -105,9 +106,14 @@ Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
                 logging.warning(f"Environment variable GEMMA_REQUEST_TIMEOUT_SECONDS has invalid integer value '{timeout_raw}'. Falling back to default: 20")
 
         try:
+            time.sleep(2)
             response = selected_model.generate_content(
                 prompt,
-                request_options={"timeout": timeout}
+                request_options={"timeout": timeout},
+                generation_config=genai.types.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                )
             )
             raw_text = response.text
         except Exception as e:

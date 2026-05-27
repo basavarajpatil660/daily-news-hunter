@@ -54,9 +54,11 @@ def main():
     user_region = os.environ.get("NEWS_REGION", "Global worldwide")
     user_language = os.environ.get("NEWS_LANGUAGE", "English only")
     top_count = get_int_env("TOP_ARTICLES_COUNT", 5)
-    max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 1)
-    
-    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 1)
+    max_articles_to_score = get_int_env("MAX_ARTICLES_TO_SCORE", 15)
+    if max_articles_to_score > 15:
+        max_articles_to_score = 15
+        
+    max_attempts = get_int_env("GEMMA_MAX_ATTEMPTS", 5)
     request_timeout = get_int_env("GEMMA_REQUEST_TIMEOUT_SECONDS", 20)
 
     logging.info(f"User categories: {user_categories}")
