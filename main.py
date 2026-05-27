@@ -91,21 +91,42 @@ def main():
         title_lower = art.get("title", "").lower()
         desc_lower = art.get("description", "").lower()
         text = f"{title_lower} {desc_lower}"
-        boost_keywords = [
+        
+        # High value topics get a +3 boost
+        critical_keywords = [
+            "ai model", "foundation model", "llm", "gpt-", "gemini", "claude", "llama",
+            "security breach", "cyber attack", "zero-day", "vulnerability", "hack", "ransomware",
+            "regulation", "lawsuit", "antitrust", "policy change", "developer tool",
+            "acquisition", "funding round", "research breakthrough", "enterprise platform"
+        ]
+        
+        # Standard tech topics get a +1 boost
+        standard_keywords = [
             "ai", "security", "hack", "breach", "regulation", "lawsuit", "launch", 
             "funding", "acquisition", "developer", "platform", "enterprise", "model", "research"
         ]
+        
+        # Weak topics get a -5 penalty
         penalize_keywords = [
             "deal", "discount", "coupon", "sale", "best price", "rumor", "might", 
-            "could", "app redesign", "ui", "fitbit", "lifestyle"
+            "could", "app redesign", "ui change", "fitbit", "lifestyle", "app complaints",
+            "user complaints", "ui update", "health app", "wearable", "smartwatch",
+            "redesign", "complaint", "ui"
         ]
+        
         score = 0
-        for kw in boost_keywords:
+        for kw in critical_keywords:
+            if kw in text:
+                score += 3
+                
+        for kw in standard_keywords:
             if kw in text:
                 score += 1
+                
         for kw in penalize_keywords:
             if kw in text:
-                score -= 2
+                score -= 5
+                
         return score
 
     keyword_filtered_articles.sort(key=compute_pre_score, reverse=True)
@@ -148,6 +169,8 @@ def main():
     source_counts = {}
     
     for article in final_unique:
+        if article.get("final_score", 0) < 8:
+            continue
         src = article.get("source", "").strip().lower()
         if not src:
             src = f"unknown_{len(selected_articles)}"

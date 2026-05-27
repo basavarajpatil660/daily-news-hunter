@@ -73,7 +73,7 @@ SCORING CRITERIA (0-10):
 - Score 9-10 (Major, High-Impact Industry News): Reserved ONLY for critical news with major industry-wide implications. Examples: major AI research breakthroughs, foundation model releases, critical zero-day security vulnerabilities or major cyber attacks, significant government tech regulations or policy changes, large funding/acquisitions/IPOs (Series B+), or massive platform changes affecting millions of users/developers.
 - Score 7-8 (Important/Useful News): Helpful, notable tech news but not groundbreaking. Examples: solid company product launches, smaller funding rounds, notable but non-critical security incidents, or developer-relevant updates.
 - Score 5-6 (Normal/Routine Updates): Standard industry events, ordinary product updates, or typical tech press releases.
-- Score below 5 (Low-Impact/Noise - Penalize heavily): App UI changes (such as Fitbit app UI redesigns), shopping/deals, rumors, tiny product updates, generic feature updates, opinion pieces, or soft lifestyle/consumer tech stories.
+- Score below 5 (Low-Impact/Noise - Penalize heavily): Fitbit-related stories, app complaints, user complaints, app redesigns (such as Fitbit app UI redesigns or consumer health app UI changes), small subscription changes, minor updates, shopping/deals, coupon/sales, rumors (e.g. might/could), opinion pieces, or soft consumer/lifestyle product/tech stories. These MUST score below 5 unless there is a major, documented industry-wide impact.
 
 SUMMARY - exactly 2 sentences with strong insight:
 Sentence 1: What happened - name the key actor and the specific concrete action. Under 24 words.
