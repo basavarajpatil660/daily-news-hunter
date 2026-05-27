@@ -18,9 +18,7 @@ def format_relevance_label(score):
     """Return a small human-readable relevance label, or empty string."""
     if score is None:
         return ""
-    if score >= 10:
-        return "Top Pick"
-    if score >= 8.5:
+    if score >= 9:
         return "Important"
     return ""
 

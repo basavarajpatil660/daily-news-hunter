@@ -65,7 +65,7 @@ def generate_html(articles, summary_stats):
         relevance_label = format_relevance_label(article.get("final_score", 0))
         separator = "" if idx == 0 else '<tr><td style="padding:0 24px;"><hr style="border:none;border-top:1px solid #eee;margin:0;"></td></tr>'
 
-        # Badge HTML - only for Top Pick or Important
+        # Badge HTML - only for Important relevance labels
         badge_html = ""
         if relevance_label:
             badge_html = f' <span style="display:inline-block;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;padding:2px 8px;border-radius:8px;letter-spacing:0.3px;text-transform:uppercase;vertical-align:middle;margin-left:4px;">{_escape(relevance_label)}</span>'
@@ -77,15 +77,15 @@ def generate_html(articles, summary_stats):
 
         cards_html += f"""{separator}
         <tr>
-          <td style="padding:20px 24px;">
+          <td style="padding:28px 24px;">
             <p style="margin:0 0 8px 0;font-size:11px;color:#6b7280;letter-spacing:0.3px;">
               <span style="display:inline-block;font-size:10px;font-weight:700;color:#fff;background:{cat_color};padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.5px;vertical-align:middle;">{category}</span>{badge_html}
               <span style="color:#ccc;margin:0 6px;">|</span>{source}<span style="color:#ccc;margin:0 6px;">|</span>{time_ago}
             </p>
-            <h2 style="margin:0 0 8px 0;font-size:18px;font-weight:700;line-height:1.35;color:#111;">
+            <h2 style="margin:0 0 10px 0;font-size:20px;font-weight:700;line-height:1.35;color:#111;">
               <a href="{_escape(link)}" style="color:#111;text-decoration:none;">{title}</a>
             </h2>
-            <p style="margin:0 0 8px 0;font-size:14px;color:#374151;line-height:1.55;">{summary}</p>
+            <p style="margin:0 0 10px 0;font-size:14px;color:#374151;line-height:1.65;">{summary}</p>
             {importance_html}
             <a href="{_escape(link)}" style="font-size:13px;color:#2563eb;text-decoration:none;font-weight:600;">Read full article &rarr;</a>
           </td>

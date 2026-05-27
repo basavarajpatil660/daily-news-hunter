@@ -86,6 +86,30 @@ def main():
     keyword_filtered_articles = filter_by_keywords(recent_articles, CATEGORIES, user_categories)
     logging.info(f"Total after keyword pre-filter: {len(keyword_filtered_articles)}")
 
+    # Sort candidates by pre-selection priority score
+    def compute_pre_score(art):
+        title_lower = art.get("title", "").lower()
+        desc_lower = art.get("description", "").lower()
+        text = f"{title_lower} {desc_lower}"
+        boost_keywords = [
+            "ai", "security", "hack", "breach", "regulation", "lawsuit", "launch", 
+            "funding", "acquisition", "developer", "platform", "enterprise", "model", "research"
+        ]
+        penalize_keywords = [
+            "deal", "discount", "coupon", "sale", "best price", "rumor", "might", 
+            "could", "app redesign", "ui", "fitbit", "lifestyle"
+        ]
+        score = 0
+        for kw in boost_keywords:
+            if kw in text:
+                score += 1
+        for kw in penalize_keywords:
+            if kw in text:
+                score -= 2
+        return score
+
+    keyword_filtered_articles.sort(key=compute_pre_score, reverse=True)
+
     articles_to_score = keyword_filtered_articles[:max_articles_to_score]
     logging.warning(f"Quota safety mode active: scoring only {len(articles_to_score)} articles (cap: {max_articles_to_score})")
 
@@ -118,7 +142,27 @@ def main():
     final_unique = remove_near_duplicates(quality_articles)
 
     final_unique.sort(key=lambda x: x.get("final_score", 0), reverse=True)
-    top_articles = final_unique[:top_count]
+    
+    selected_articles = []
+    deferred_articles = []
+    source_counts = {}
+    
+    for article in final_unique:
+        src = article.get("source", "").strip().lower()
+        if not src:
+            src = f"unknown_{len(selected_articles)}"
+        current_count = source_counts.get(src, 0)
+        if current_count < 2:
+            selected_articles.append(article)
+            source_counts[src] = current_count + 1
+        else:
+            deferred_articles.append(article)
+            
+    if len(selected_articles) < top_count:
+        needed = top_count - len(selected_articles)
+        selected_articles.extend(deferred_articles[:needed])
+        
+    top_articles = selected_articles[:top_count]
     logging.info(f"Final top articles selected: {len(top_articles)}")
 
     for article in top_articles:
