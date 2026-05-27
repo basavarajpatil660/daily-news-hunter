@@ -15,3 +15,24 @@ def filter_by_score(articles, min_score=5):
 
 def filter_clickbait(articles):
     return [a for a in articles if not a.get('clickbait', True)]
+
+def filter_by_keywords(articles, categories_dict, user_categories):
+    all_keywords = set()
+    for cat in user_categories:
+        if cat in categories_dict:
+            for kw in categories_dict[cat].get("keywords", []):
+                all_keywords.add(kw.lower())
+                
+    if not all_keywords:
+        return articles
+        
+    filtered = []
+    for a in articles:
+        title = (a.get('title') or '').lower()
+        desc = (a.get('description') or '').lower()
+        text_to_search = title + " " + desc
+        
+        if any(kw in text_to_search for kw in all_keywords):
+            filtered.append(a)
+            
+    return filtered

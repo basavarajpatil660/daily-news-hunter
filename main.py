@@ -10,7 +10,7 @@ from services.gemma import process_article
 from services.mail import send_email
 from utils.deduplicate import remove_duplicate_urls, remove_duplicate_titles, remove_near_duplicates
 from utils.scoring import calculate_final_score
-from utils.filter import filter_by_age, filter_by_score, filter_clickbait
+from utils.filter import filter_by_age, filter_by_score, filter_clickbait, filter_by_keywords
 from reports.email_template import generate_html
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,11 +62,14 @@ def main():
     recent_articles = filter_by_age(unique_titles, hours=24)
     logging.info(f"Total after 24-hour filter and basic deduplication: {len(recent_articles)}")
     
+    keyword_filtered_articles = filter_by_keywords(recent_articles, CATEGORIES, user_categories)
+    logging.info(f"Total after keyword pre-filter: {len(keyword_filtered_articles)}")
+    
     logging.info("Starting Gemma 4 scoring...")
     scored_articles = []
     failed_count = 0
     
-    for article in recent_articles:
+    for article in keyword_filtered_articles:
         result = process_article(article, user_categories_str, user_region)
         if result:
             final_score = calculate_final_score(result['gemma_score'], result['source'])
@@ -75,7 +78,7 @@ def main():
         else:
             failed_count += 1
             
-    total_processed = len(recent_articles)
+    total_processed = len(keyword_filtered_articles)
     if total_processed > 0 and (failed_count / total_processed) > 0.5:
         logging.error("Over 50% of articles failed Gemma 4 processing.")
         send_email(
