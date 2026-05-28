@@ -1,44 +1,53 @@
 import time
 import logging
-import os
 
 def call_with_retry(fn, label):
-    max_attempts_raw = os.environ.get("GEMMA_MAX_ATTEMPTS", "5")
+    """
+    Execute fn with up to 5 attempts, utilizing exponential backoff
+    and error-specific wait overrides. Caps wait times at 60 seconds
+    and implements a mandatory 2-second delay after successful calls.
+    """
     max_attempts = 5
-    if max_attempts_raw and max_attempts_raw.strip():
-        try:
-            max_attempts = int(max_attempts_raw.strip())
-        except ValueError:
-            logging.warning(f"Environment variable GEMMA_MAX_ATTEMPTS has invalid integer value '{max_attempts_raw}'. Falling back to default: 5")
-
     for attempt in range(1, max_attempts + 1):
         try:
             logging.info(f"AI [{label}]: attempt {attempt} of {max_attempts}...")
             result = fn()
+            
+            # Mandatory 2 second gap after every successful API call
+            time.sleep(2)
             return result
         except Exception as e:
             err_str = str(e).lower()
-            if any(term in err_str for term in ["not found", "404", "api key", "apikey", "permission", "invalid argument", "400", "403"]):
-                logging.error(f"Permanent error encountered for [{label}]: {e}")
-                return None
             
-            logging.warning(f"Attempt {attempt} failed: {e}")
-            if attempt < max_attempts:
-                wait_time = 0
-                if any(term in err_str for term in ["429", "quota", "limit exceeded", "resource_exhausted"]):
-                    wait_time = 60
-                elif any(term in err_str for term in ["503", "504", "service unavailable", "gateway timeout"]):
-                    wait_time = 30
-                elif "500" in err_str:
-                    wait_time = 15
+            # 404 is a permanent model error - do not retry
+            if "404" in err_str or "not found" in err_str:
+                logging.error(f"Permanent 404 error encountered for [{label}]: {e}")
+                return None
                 
-                # Exponential backoff base
-                base_wait = 5 * (2 ** (attempt - 1))
-                base_wait = min(base_wait, 60)
+            logging.warning(f"Attempt {attempt} failed for [{label}]: {e}")
+            
+            if attempt == max_attempts:
+                break
                 
-                final_wait = max(base_wait, wait_time)
-                logging.info(f"Waiting {final_wait} seconds before next attempt...")
-                time.sleep(final_wait)
-
+            # Base exponential backoff wait times
+            backoff_waits = {1: 5, 2: 10, 3: 20, 4: 40}
+            base_wait = backoff_waits.get(attempt, 60)
+            
+            # Error-specific wait overrides
+            override_wait = 0
+            if any(term in err_str for term in ["429", "quota", "rate"]):
+                override_wait = 60
+            elif any(term in err_str for term in ["503", "504", "timeout"]):
+                override_wait = 30
+            elif "500" in err_str:
+                override_wait = 15
+                
+            # Apply override and cap at 60s
+            wait_time = min(max(base_wait, override_wait), 60)
+            
+            logging.info(f"Waiting {wait_time} seconds before retrying [{label}]...")
+            time.sleep(wait_time)
+            
     logging.error(f"AI permanently failed for [{label}] after {max_attempts} attempts.")
     return None
+

@@ -4,138 +4,173 @@ import json
 import logging
 import html
 import time
+import re
 import google.generativeai as genai
 from utils.retry import call_with_retry
 
-# Gemma 4 models kept for future manual testing:
-# MODELS_IN_ORDER = [
-#     "models/gemma-4-31b-it"
-# ]
-
-DEFAULT_MODEL = "models/gemini-2.5-flash"
-
-MODELS_TO_TRY = [
-    "gemma-3-27b-it",
-    "gemma-3-12b-it", 
-    "gemma-3-4b-it",
-    "gemma-2-27b-it",
-    "gemma-2-9b-it",
-]
-
-_active_model = None
-
-
-def get_working_model(client):
-    models = list(MODELS_TO_TRY)
-    env_model = os.environ.get("MODEL_NAME", "").strip()
-    if env_model:
-        models.insert(0, env_model)
-    else:
-        models.append(DEFAULT_MODEL)
-        
-    for name in models:
-        model_name = name if name.startswith("models/") else f"models/{name}"
-        try:
-            model = client.GenerativeModel(model_name)
-            # Test with a minimal call
-            test = model.generate_content("Reply with: ok")
-            if test:
-                logging.info(f"Working model found: {model_name}")
-                return model, model_name
-        except Exception as e:
-            logging.warning(f"Model {model_name} not available: {e}")
-            continue
-    return None, None
-
+MODEL_NAME = "gemma-4-31b-it"
+_model = None
 
 def get_model():
-    global _active_model
-    if _active_model:
-        return _active_model
-
-    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-
-    model, found_name = get_working_model(genai)
-    if model:
-        _active_model = model
-        return model
-    
-    logging.error("Failed to find any working model.")
-    return None
-
+    """
+    Initialize the gemma-4-31b-it model. If the model is not found (404) or is unavailable,
+    log the specific messages and perform a clean exit (sys.exit(0)).
+    """
+    global _model
+    if _model is not None:
+        return _model
+        
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        logging.error("GEMINI_API_KEY is missing from environment variables.")
+        sys.exit(1)
+        
+    genai.configure(api_key=api_key)
+    try:
+        logging.info(f"Initializing model {MODEL_NAME}...")
+        model = genai.GenerativeModel(MODEL_NAME)
+        # Test connection/availability
+        # This will raise a 404 error if the model doesn't exist/isn't available
+        model.generate_content("ping", request_options={"timeout": 5})
+        _model = model
+        logging.info(f"Successfully initialized and verified {MODEL_NAME}.")
+        return _model
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "404" in err_msg or "not found" in err_msg or "not_found" in err_msg:
+            logging.error("Gemma 4 (gemma-4-31b-it) is not available right now.")
+            logging.error("Will retry at next scheduled run.")
+            sys.exit(0)
+        else:
+            logging.error(f"Failed to initialize gemma-4-31b-it: {e}")
+            logging.error("Gemma 4 (gemma-4-31b-it) is not available right now.")
+            logging.error("Will retry at next scheduled run.")
+            sys.exit(0)
 
 def extract_json(text):
+    """
+    Cleans response text from the model and extracts JSON.
+    """
+    if not text:
+        return None
+    # Strip markdown code blocks first
+    text = re.sub(r'```(?:json)?\s*', '', text)
+    text = re.sub(r'```', '', text)
+    text = text.strip()
     try:
         start = text.index("{")
         end = text.rindex("}") + 1
         return json.loads(text[start:end])
     except (ValueError, json.JSONDecodeError):
-        return None
+        pass
+    # Last resort pattern match
+    match = re.search(r'\{[^{}]*"score"[^{}]*\}', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+    return None
 
+def validate_gemma_response(parsed):
+    """
+    Validates the parsed model response matching required types and ranges.
+    """
+    if not isinstance(parsed, dict):
+        return False
+    score = parsed.get("score")
+    summary = parsed.get("summary")
+    clickbait = parsed.get("clickbait")
+    
+    if not isinstance(score, (int, float)):
+        return False
+    if not (0 <= score <= 10):
+        return False
+    if not isinstance(summary, str) or len(summary.strip()) < 10:
+        return False
+        
+    # Handle Gemma returning "true"/"false" as strings
+    if isinstance(clickbait, str):
+        parsed["clickbait"] = clickbait.lower() == "true"
+    elif not isinstance(clickbait, bool):
+        return False
+        
+    return True
 
 def process_article(article, categories, region):
+    """
+    Calls Gemma 4 to score and summarize the article. Uses call_with_retry for safety.
+    """
     model = get_model()
     if not model:
-        logging.error("No model available. Aborting run.")
+        logging.error("Gemma 4 model is not initialized.")
         sys.exit(1)
 
-    prompt = f"""You are a strict technology news editor scoring articles for an executive daily briefing.
-The reader cares about: {categories}
-Reader region: {region}
+    # Determine if we need to explicitly reject entertainment/sports
+    lower_cats = categories.lower()
+    reject_entertainment = "bollywood" not in lower_cats and "entertainment" not in lower_cats
+    reject_sports = "sports" not in lower_cats
+    
+    rejection_details = []
+    if reject_entertainment:
+        rejection_details.append("- Bollywood or celebrity entertainment")
+    if reject_sports:
+        rejection_details.append("- Sports scores or sports updates")
+    rejection_details.extend([
+        "- Celebrity gossip",
+        "- Astrology or horoscopes",
+        "- Motivational content with no real news value",
+        "- Crypto pump or investment schemes",
+        "- Pure opinion pieces"
+    ])
+    
+    rejection_text = "\n".join(rejection_details)
+
+    prompt = f"""You are a news relevance scorer.
+The user wants news about: {categories}
+The user region is: {region}
 
 Article title: {article['title']}
 Article description: {article['description']}
 Article source: {article['source']}
 
-SCORING CRITERIA (0-10):
-- Score 9-10 (Major, High-Impact Industry News): Reserved ONLY for critical news with major industry-wide implications. Examples: major AI research breakthroughs, foundation model releases, critical zero-day security vulnerabilities or major cyber attacks, significant government tech regulations or policy changes, large funding/acquisitions/IPOs (Series B+), or massive platform changes affecting millions of users/developers.
-- Score 7-8 (Important/Useful News): Helpful, notable tech news but not groundbreaking. Examples: solid company product launches, smaller funding rounds, notable but non-critical security incidents, or developer-relevant updates.
-- Score 5-6 (Normal/Routine Updates): Standard industry events, ordinary product updates, or typical tech press releases.
-- Score below 5 (Low-Impact/Noise - Penalize heavily): Fitbit-related stories, app complaints, user complaints, app redesigns (such as Fitbit app UI redesigns or consumer health app UI changes), small subscription changes, minor updates, shopping/deals, coupon/sales, rumors (e.g. might/could), opinion pieces, or soft consumer/lifestyle product/tech stories. These MUST score below 5 unless there is a major, documented industry-wide impact.
+Your tasks:
+1. Rate relevance from 0 to 10.
+   10 means perfectly matches user interest.
+   0 means completely irrelevant.
+   Only give scores of 7 or above for genuinely
+   important, substantial news stories.
+   Do not give high scores to minor app updates,
+   rumors, opinion pieces, or consumer complaints.
+2. Write a 2 sentence summary in simple English.
+3. Write an importance_reason explaining why the story matters (3-7 words).
+4. Decide if this is clickbait.
+   Clickbait means: shocking title with no real news,
+   misleading headline, or pure motivation/opinion.
 
-SUMMARY - exactly 2 sentences with strong insight:
-Sentence 1: What happened - name the key actor and the specific concrete action. Under 24 words.
-Sentence 2: Why it matters - state the concrete, high-level business, developer, or industry impact. Give a strong, insightful explanation instead of a vague or obvious statement. Under 24 words.
-Rules:
-- Do NOT repeat the headline word-for-word.
-- Do NOT start with "This article", "The article", or "This piece".
-- No vague phrases like "This is important because" or "This could impact".
-- Use active voice. Be specific.
+Additionally, you MUST reject (rate relevance score 0) any articles about:
+{rejection_text}
 
-IMPORTANCE REASON:
-Write one short phrase (3-7 words) classifying why this story matters.
-Examples: "Major AI product shift", "Security risk for developers", "Key platform policy change", "Low impact consumer update".
-
-CLICKBAIT:
-Set true if the headline is misleading, sensationalized, has no real news, or is pure opinion.
-
-Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
+IMPORTANT: Respond ONLY in valid JSON format.
+No extra text before or after.
+No markdown formatting.
+No code blocks.
+Start response with {{ and end with }}
 
 {{
   "score": 8,
-  "summary": "What happened sentence. Why it matters sentence.",
-  "importance_reason": "Short phrase here",
+  "summary": "First sentence here. Second sentence here.",
+  "importance_reason": "Brief insight phrase",
   "clickbait": false
-}}
-"""
+}}"""
 
     def _call_gemma():
+        # Ensure model is checked/loaded
         selected_model = get_model()
-        if not selected_model:
-            raise Exception("No Gemma 4 model available")
-        timeout_raw = os.environ.get("GEMMA_REQUEST_TIMEOUT_SECONDS", "")
-        timeout = 20
-        if timeout_raw and timeout_raw.strip():
-            try:
-                timeout = int(timeout_raw.strip())
-            except ValueError:
-                logging.warning(f"Environment variable GEMMA_REQUEST_TIMEOUT_SECONDS has invalid integer value '{timeout_raw}'. Falling back to default: 20")
-
+        
         try:
-            time.sleep(2)
             response = selected_model.generate_content(
                 prompt,
-                request_options={"timeout": timeout},
                 generation_config=genai.types.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.1,
@@ -143,25 +178,25 @@ Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
             )
             raw_text = response.text
         except Exception as e:
-            raise Exception(f"Model generation call failed: {e}")
+            err_msg = str(e).lower()
+            # If 404 is raised here: permanent model error, exit cleanly
+            if "404" in err_msg or "not found" in err_msg or "not_found" in err_msg:
+                logging.error("Gemma 4 (gemma-4-31b-it) is not available right now.")
+                logging.error("Will retry at next scheduled run.")
+                sys.exit(0)
+            raise e
+            
         parsed = extract_json(raw_text)
         if not parsed:
-            preview = raw_text[:200] if raw_text else "(empty response)"
-            raise Exception(f"Failed to parse JSON from model response: {preview}")
-        if "score" not in parsed or "summary" not in parsed or "clickbait" not in parsed:
-            raise Exception("Missing required fields in JSON")
-        if not isinstance(parsed["score"], (int, float)) or not (0 <= parsed["score"] <= 10):
-            raise Exception("Invalid score")
-        if not isinstance(parsed["summary"], str) or len(parsed["summary"].strip()) == 0:
-            raise Exception("Invalid summary")
-        parsed["summary"] = html.unescape(parsed["summary"])
-        if "importance_reason" in parsed and isinstance(parsed["importance_reason"], str):
-            parsed["importance_reason"] = html.unescape(parsed["importance_reason"])
-        if not isinstance(parsed["clickbait"], bool):
-            raise Exception("Invalid clickbait boolean")
-        # importance_reason is optional for validation - use default if missing
+            raise Exception("Failed to extract JSON from Gemma response")
+            
+        if not validate_gemma_response(parsed):
+            raise Exception("Gemma response failed validation checks")
+            
+        # Ensure optional importance_reason is set
         if "importance_reason" not in parsed or not isinstance(parsed.get("importance_reason"), str):
             parsed["importance_reason"] = ""
+            
         return parsed
 
     label = f"Score article: {article['title'][:30]}"
@@ -173,4 +208,6 @@ Respond ONLY in valid JSON. No extra text, no markdown, no code blocks.
         article["importance_reason"] = result.get("importance_reason", "")
         article["clickbait"] = result["clickbait"]
         return article
+        
     return None
+

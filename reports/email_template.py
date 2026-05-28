@@ -41,8 +41,8 @@ def generate_html(articles, summary_stats):
         </tr>
         <tr>
           <td style="background:#ffffff;padding:36px 24px;text-align:center;border-radius:0 0 6px 6px;">
-            <p style="font-size:15px;color:#555;line-height:1.6;margin:0;">No qualifying articles were found today.</p>
-            <p style="font-size:13px;color:#999;margin:10px 0 0 0;">The system will try again at the next scheduled run.</p>
+            <p style="font-size:15px;color:#555;line-height:1.6;margin:0;">No qualifying articles were found today<br>for your chosen categories.</p>
+            <p style="font-size:13px;color:#999;margin:10px 0 0 0;">The system will try again at the next<br>scheduled run automatically.</p>
           </td>
         </tr>
       </table>

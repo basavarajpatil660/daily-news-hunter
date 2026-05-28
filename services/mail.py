@@ -25,6 +25,10 @@ def send_email(subject, html_content, to_email, gmail_user, gmail_pass):
         server.send_message(msg)
         server.quit()
         logging.info("Email sent successfully!")
-    except Exception as e:
-        logging.error(f"Failed to send email: {e}")
+    except smtplib.SMTPAuthenticationError as auth_err:
+        logging.error(f"Gmail SMTP Authentication failed: {auth_err}. Check GMAIL_USER and GMAIL_PASS App Password.")
         save_backup_html(html_content)
+    except Exception as e:
+        logging.error(f"Failed to send email: {e}", exc_info=True)
+        save_backup_html(html_content)
+
