@@ -504,5 +504,4 @@ Only after I say yes, start building all the code.
 Built by [**@b.nick.ai**](https://www.instagram.com/b.nick.ai/) · [Back to README](README.md)
 
 </div>
-PROMPTEOF
-echo "PROMPT done"
+
