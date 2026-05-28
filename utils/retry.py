@@ -37,7 +37,7 @@ def call_with_retry(fn, label):
             override_wait = 0
             if any(term in err_str for term in ["429", "quota", "rate"]):
                 override_wait = 60
-            elif any(term in err_str for term in ["503", "504", "timeout"]):
+            elif any(term in err_str for term in ["503", "504", "timeout", "deadline"]):
                 override_wait = 30
             elif "500" in err_str:
                 override_wait = 15

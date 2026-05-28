@@ -11,41 +11,50 @@ from utils.retry import call_with_retry
 MODEL_NAME = "gemma-4-31b-it"
 _model = None
 
-def get_model():
+def initialize_gemma_with_retry():
     """
-    Initialize the gemma-4-31b-it model. If the model is not found (404) or is unavailable,
-    log the specific messages and perform a clean exit (sys.exit(0)).
+    Initializes the Gemma 4 model with retries and exponential waits.
     """
     global _model
     if _model is not None:
         return _model
-        
+
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         logging.error("GEMINI_API_KEY is missing from environment variables.")
-        sys.exit(1)
-        
+        return None
+
     genai.configure(api_key=api_key)
-    try:
-        logging.info(f"Initializing model {MODEL_NAME}...")
-        model = genai.GenerativeModel(MODEL_NAME)
-        # Test connection/availability
-        # This will raise a 404 error if the model doesn't exist/isn't available
-        model.generate_content("ping", request_options={"timeout": 5})
-        _model = model
-        logging.info(f"Successfully initialized and verified {MODEL_NAME}.")
-        return _model
-    except Exception as e:
-        err_msg = str(e).lower()
-        if "404" in err_msg or "not found" in err_msg or "not_found" in err_msg:
-            logging.error("Gemma 4 (gemma-4-31b-it) is not available right now.")
-            logging.error("Will retry at next scheduled run.")
-            sys.exit(0)
-        else:
-            logging.error(f"Failed to initialize gemma-4-31b-it: {e}")
-            logging.error("Gemma 4 (gemma-4-31b-it) is not available right now.")
-            logging.error("Will retry at next scheduled run.")
-            sys.exit(0)
+    for attempt in range(1, 6):  # 5 attempts
+        try:
+            model = genai.GenerativeModel("gemma-4-31b-it")
+            test = model.generate_content("Reply with: ok")
+            if test:
+                logging.info("Gemma 4 initialized successfully.")
+                _model = model
+                return model
+        except Exception as e:
+            err = str(e)
+            if "404" in err:
+                logging.error("Gemma 4 model not found (404). Cannot continue.")
+                return None
+            elif "504" in err or "503" in err or "timeout" in err.lower() or "deadline" in err.lower():
+                wait = min(attempt * 20, 60)
+                logging.warning(f"Gemma 4 busy (attempt {attempt}/5). Waiting {wait}s...")
+                time.sleep(wait)
+            else:
+                logging.error(f"Unexpected Gemma 4 error: {e}")
+                return None
+    logging.error("Gemma 4 failed after 5 initialization attempts.")
+    return None
+
+def get_model():
+    """
+    Returns the cached GenerativeModel instance.
+    """
+    global _model
+    return _model
+
 
 def extract_json(text):
     """

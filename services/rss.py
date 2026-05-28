@@ -4,23 +4,23 @@ import logging
 import requests
 import html
 from datetime import datetime, timezone, timedelta
-from email.utils import parsedate_to_datetime
+import dateutil.parser
 
 def parse_date(date_string):
     """
-    Carefully parse published date string into a UTC datetime object.
+    Carefully parse published date string into a UTC datetime object using python-dateutil.
     Falls back to current time minus 12 hours on failure.
     """
     try:
-        dt = parsedate_to_datetime(date_string)
+        dt = dateutil.parser.parse(date_string)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         else:
             dt = dt.astimezone(timezone.utc)
         return dt
-    except Exception as e:
-        logging.warning(f"Date parsing failed for '{date_string}': {e}. Using fallback.")
+    except Exception:
         return datetime.now(timezone.utc) - timedelta(hours=12)
+
 
 def fetch_feed(url, results, category, lock):
     """

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from config.categories import CATEGORIES, get_google_news_rss, get_google_news_rss_hindi
 from services.rss import fetch_all_feeds
-from services.gemma import process_article
+from services.gemma import process_article, initialize_gemma_with_retry
 from services.mail import send_email
 from utils.deduplicate import remove_duplicate_urls, remove_duplicate_titles, remove_near_duplicates
 from utils.scoring import calculate_final_score, pre_rank_article
@@ -33,6 +33,13 @@ def main():
 
     load_dotenv()
     check_env()
+
+    # Initialize Gemma 4 model at startup
+    gemma_model = initialize_gemma_with_retry()
+    if gemma_model is None:
+        logging.error("Gemma 4 initialization failed. Exiting cleanly.")
+        sys.exit(0)
+
 
     # Retrieve categories
     user_categories_str = os.environ.get("NEWS_CATEGORIES", "")
