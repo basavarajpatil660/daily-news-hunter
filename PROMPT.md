@@ -1,4 +1,3 @@
-cat > /mnt/user-data/outputs/PROMPT.md << 'PROMPTEOF'
 # 🤖 AI Daily News Trend Hunter — Full Build Prompt
 
 > Copy this entire prompt and paste it into any AI assistant (Claude, Gemini, ChatGPT) to build the full project from scratch.
